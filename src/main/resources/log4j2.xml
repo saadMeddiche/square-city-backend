@@ -6,7 +6,7 @@
         <!-- Console appender configuration -->
         <Console name="console" target="SYSTEM_OUT">
             <PatternLayout
-                    pattern="%d{yyyy-MM-dd HH:mm:ss} %-5p %c{1}:%L - %m%n" />
+                    pattern="%d{HH:mm:ss} [%t] %highlight{%-5level}{FATAL=bg_red bright_white, ERROR=bright_red, WARN=bright_yellow, INFO=bright_green, DEBUG=bright_cyan, TRACE=bright_black} %msg%n%throwable" />
         </Console>
     </Appenders>
     <Loggers>
