@@ -1,19 +1,20 @@
 package org.saadMeddiche;
 
-import org.saadMeddiche.example_one.entities.ChatServer;
 
-import java.util.logging.Logger;
-
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public class Main {
 
-    private static final Logger logger = Logger.getLogger("MAIN");
-
-    private static final int SERVER_PORT = 8080;
+    private static final Logger logger = LogManager.getLogger(Main.class);
 
     public static void main(String[] args) {
-        ChatServer chatServer = new ChatServer("Chat 1", SERVER_PORT);
-        chatServer.start();
+        logger.trace("Trace log message");
+        logger.debug("Debug log message");
+        logger.info("Info log message");
+        logger.error("Error log message");
+        logger.warn("Warn log message");
+        logger.fatal("Fatal log message");
     }
 
 }
