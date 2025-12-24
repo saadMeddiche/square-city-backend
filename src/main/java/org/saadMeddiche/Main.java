@@ -1,11 +1,11 @@
 package org.saadMeddiche;
 
-import org.saadMeddiche.entities.BorderControlAgent;
+import org.saadMeddiche.entities.SquareCityAirport;
 
 public class Main {
 
     public static void main(String[] args) {
-        BorderControlAgent controlAgent = new BorderControlAgent();
+        SquareCityAirport controlAgent = new SquareCityAirport();
         controlAgent.run();
     }
 

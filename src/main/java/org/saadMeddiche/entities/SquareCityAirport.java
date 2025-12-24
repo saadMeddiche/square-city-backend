@@ -13,18 +13,18 @@ import java.util.*;
 /**
  * This is the websocket server.
  * */
-public class BorderControlAgent implements Runnable {
+public class SquareCityAirport implements Runnable {
 
-    private final static Logger LOG = LogManager.getLogger(BorderControlAgent.class);
+    private final static Logger LOG = LogManager.getLogger(SquareCityAirport.class);
 
     private final String name;
     private final int port;
 
-    public BorderControlAgent() {
+    public SquareCityAirport() {
         this(UUID.randomUUID().toString(), 7070);
     }
 
-    public BorderControlAgent(String name, int port) {
+    public SquareCityAirport(String name, int port) {
         this.name = name;
         this.port = port;
     }
@@ -33,17 +33,17 @@ public class BorderControlAgent implements Runnable {
     public void run() {
 
         try (ServerSocket serverSocket = new ServerSocket(port)) {
-            LOG.info("Border control agent[{}] listening on port {}", name, serverSocket.getLocalPort());
+            LOG.info("Airport[{}] opened port[{}]", name, serverSocket.getLocalPort());
 
             while (true) {
                 Socket clientSocket = serverSocket.accept();
-                LOG.info("Visitor from {}", clientSocket);
+                LOG.info("Tourist[{}] entered airport[{}]", clientSocket, name);
 
                 new Thread(() -> handlePassport(clientSocket)).start();
             }
 
         } catch (IOException ioException) {
-            LOG.fatal("Border control agent[{}] failer to control port[{}]", name, port, ioException);
+            LOG.fatal("Airport[{}] failer to control port[{}]", name, port, ioException);
         }
 
     }
