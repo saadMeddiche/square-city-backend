@@ -157,7 +157,7 @@ public class BorderControlAgent extends Thread {
         String line;
         try {
 
-            while((line = in.readLine()) != null) {
+            while((line = in.readLine()) != null && !line.isEmpty()) {
                 if (line.contains(":")) {
                     String[] parts = line.split(":", 2);
                     headers.put(parts[0].trim(), parts[1].trim());
