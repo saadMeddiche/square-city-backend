@@ -74,13 +74,13 @@ public class BorderControlAgent extends Thread {
 
             String acceptCode = optionalConfirmationCode.get();
 
-            String confirmationResponse = generateConfirmationResponse(acceptCode);
+            String confirmationResponse = generateConfirmationResponse(visitorInfo.fullName, acceptCode);
 
             out.write(confirmationResponse);
             out.flush();
 
-            SquareHandler squareHandler = new SquareHandler(socket);
-            squareHandler.listen();
+//            SquareHandler squareHandler = new SquareHandler(socket);
+//            squareHandler.listen();
 
             LOG.info("[{}]'s passport is accepted response, his name is {}", socket, visitorInfo.fullName);
 
@@ -201,10 +201,10 @@ public class BorderControlAgent extends Thread {
 
     }
 
-    private final static String CONFIRMATION_RESPONSE_TEMPLATED = "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: %s";
+    private final static String CONFIRMATION_RESPONSE_TEMPLATED = "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Protocol: %s\r\nSec-WebSocket-Accept: %s\r\n\r\n";
 
-    private String generateConfirmationResponse(String acceptCode) {
-        return String.format(CONFIRMATION_RESPONSE_TEMPLATED, acceptCode);
+    private String generateConfirmationResponse(String chosenProtocol, String acceptCode) {
+        return String.format(CONFIRMATION_RESPONSE_TEMPLATED, chosenProtocol, acceptCode);
     }
 
     // TODO: understand why the browser do not allow custom header
