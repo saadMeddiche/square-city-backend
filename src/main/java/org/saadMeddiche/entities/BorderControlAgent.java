@@ -79,6 +79,9 @@ public class BorderControlAgent extends Thread {
             out.write(confirmationResponse);
             out.flush();
 
+            SquareHandler squareHandler = new SquareHandler(socket);
+            squareHandler.listen();
+
             LOG.info("[{}]'s passport is accepted response, his name is {}", socket, visitorInfo.fullName);
 
         } catch (Exception e) {
