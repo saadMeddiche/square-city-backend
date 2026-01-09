@@ -60,7 +60,7 @@ public class BorderControlAgent extends Thread {
 
             if(optionalConfirmationCode.isEmpty()) {
                 // If I am not mistaken, this block of code should never be executed
-                LOG.info("[{}]'s passport confirmation failed []", socket);
+                LOG.info("Confirmation code generation failed [{}]", socket);
                 socket.close();
                 return;
             }
