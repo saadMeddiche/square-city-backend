@@ -11,7 +11,6 @@ import java.io.OutputStreamWriter;
 import java.net.Socket;
 import java.security.MessageDigest;
 import java.util.Base64;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -22,6 +21,8 @@ public class BorderControlAgent extends Thread {
     private final SquareCityAirport airport;
 
     private final Socket visitorSocket;
+
+    private final PassportScanner passportScanner = new PassportScanner();
 
     public BorderControlAgent(SquareCityAirport airport, Socket visitorSocket) {
         this.airport = airport;
@@ -43,23 +44,15 @@ public class BorderControlAgent extends Thread {
             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             BufferedWriter out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
 
-            PassportValidation passportValidation = validatePassport(in);
+            PassportScanResult scanResult = passportScanner.scan(in);
 
-            if(!passportValidation.isValid) {
+            if(!scanResult.isPassportValid()) {
                 LOG.info("[{}]'s passport validation failed", socket);
                 socket.close();
                 return;
             }
 
-            Map<String,String> passportHeaders = passportValidation.passportHeaders;
-
-            VisitorInfo visitorInfo = extractVisitorInfo(passportHeaders.get(PassportHeaders.SEC_WEBSOCKET_PROTOCOL));
-
-            if(!visitorInfo.isExtractionSuccess) {
-                LOG.info("[{}]'s visitor extraction failed", socket);
-                socket.close();
-                return;
-            }
+            Map<String,String> passportHeaders = scanResult.passportHeaders();
 
             String webSocketKey = passportHeaders.get(PassportHeaders.SEC_WEBSOCKET_KEY);
 
@@ -74,7 +67,7 @@ public class BorderControlAgent extends Thread {
 
             String acceptCode = optionalConfirmationCode.get();
 
-            String confirmationResponse = generateConfirmationResponse(visitorInfo.fullName, acceptCode);
+            String confirmationResponse = generateConfirmationResponse(acceptCode);
 
             out.write(confirmationResponse);
             out.flush();
@@ -82,97 +75,11 @@ public class BorderControlAgent extends Thread {
             SquareHandler squareHandler = new SquareHandler(socket);
             squareHandler.listen();
 
-            LOG.info("[{}]'s passport is accepted response, his name is {}", socket, visitorInfo.fullName);
+            LOG.info("[{}]'s passport is accepted response, his name is {}", socket, scanResult.visitorInfo().squareName);
 
         } catch (Exception e) {
             LOG.fatal("Border control agent[{}] failer to verify passport for {}", airport.name, socket, e);
         }
-
-    }
-
-    record PassportValidation(boolean isValid, Map<String,String> passportHeaders) {}
-
-    /**
-     * Validate the handshake based on RFC6455 rules, also custom ones related to the app.
-     * */
-    private PassportValidation validatePassport(BufferedReader in) {
-
-
-        // =================== RFC6455's rules ===================
-
-        if(!isGet(in)) {
-            LOG.warn("Passport not valid, cause [NOT GET]");
-            return new PassportValidation(false,null);
-        }
-
-        Map<String,String> passportHeaders = readHeader(in);
-
-        if(passportHeaders.isEmpty()) {
-            LOG.warn("Passport not valid, cause [NO HEADERS]");
-            return new PassportValidation(false,null);
-        }
-
-        if(!"websocket".equalsIgnoreCase(passportHeaders.get(PassportHeaders.UPGRADE))) {
-            LOG.warn("Passport not valid, cause [NOT WEBSOCKET UPGRADE]");
-            return new PassportValidation(false,null);
-        }
-
-        if(passportHeaders.get(PassportHeaders.SEC_WEBSOCKET_KEY) == null) {
-            LOG.warn("Passport not valid, cause [NO KEY PROVIDED]");
-            return new PassportValidation(false,null);
-        }
-
-        // =================== Custom App's rules ===================
-
-        // Because of browser security limitations, there is no way to send custom headers,
-        // But there is a trick. The protocol header is modifiable.
-        // So I will exploit that to send whatever I want.
-        if(passportHeaders.get(PassportHeaders.SEC_WEBSOCKET_PROTOCOL) == null) {
-            LOG.warn("Passport not valid, cause [NO PROTOCOL PROVIDED]");
-            return new PassportValidation(false,null);
-        }
-
-        return new PassportValidation(true, passportHeaders);
-
-    }
-
-    private boolean isGet(BufferedReader in) {
-
-        try {
-
-            String firstLine = in.readLine();
-            return firstLine.startsWith("GET /");
-
-        } catch (Exception e) {
-            LOG.warn("Failed to verify if HTTP request is get, returning false", e);
-            return false;
-        }
-
-    }
-
-    /**
-     * this method returns an empty map when it fails to extract even a single header.
-     * */
-    private Map<String,String> readHeader(BufferedReader in) {
-
-        Map<String , String> headers = new HashMap<>();
-
-        String line;
-        try {
-
-            while((line = in.readLine()) != null && !line.isEmpty()) {
-                if (line.contains(":")) {
-                    String[] parts = line.split(":", 2);
-                    headers.put(parts[0].trim(), parts[1].trim());
-                }
-            }
-
-        } catch (Exception e) {
-            LOG.warn("Failed to read passport headers, returning empty map", e);
-            return new HashMap<>();
-        }
-
-        return headers;
 
     }
 
@@ -201,23 +108,13 @@ public class BorderControlAgent extends Thread {
 
     }
 
-    private final static String CONFIRMATION_RESPONSE_TEMPLATED = "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Protocol: %s\r\nSec-WebSocket-Accept: %s\r\n\r\n";
+    private final static String CONFIRMATION_RESPONSE_TEMPLATED = "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: %s\r\n\r\n";
 
-    private String generateConfirmationResponse(String chosenProtocol, String acceptCode) {
-        return String.format(CONFIRMATION_RESPONSE_TEMPLATED, chosenProtocol, acceptCode);
+    private String generateConfirmationResponse(String acceptCode) {
+        return String.format(CONFIRMATION_RESPONSE_TEMPLATED, acceptCode);
     }
 
     // TODO: understand why the browser do not allow custom header
     // TODO: write about the exploit of protocol header
-
-    record VisitorInfo(boolean isExtractionSuccess, String fullName, String color) {}
-
-    private VisitorInfo extractVisitorInfo(String websocketProtocolValue) {
-        if(websocketProtocolValue.contains(",")) {
-            String[] parts = websocketProtocolValue.split(",");
-            return new VisitorInfo(true, parts[0], parts[1]);
-        }
-        return new VisitorInfo(false, null, null);
-    }
 
 }
